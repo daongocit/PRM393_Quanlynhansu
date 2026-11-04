@@ -114,7 +114,7 @@ class _CreateOrEditTaskScreenState extends State<CreateOrEditTaskScreen> {
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
-                value: _selectedAssigneeId,
+                initialValue: _selectedAssigneeId,
                 decoration: const InputDecoration(),
                 items: deptUsers.map((u) {
                   return DropdownMenuItem<int>(
@@ -166,7 +166,7 @@ class _CreateOrEditTaskScreenState extends State<CreateOrEditTaskScreen> {
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 90)),
                   );
-                  if (pickedDate != null && mounted) {
+                  if (pickedDate != null && context.mounted) {
                     final pickedTime = await showTimePicker(
                       context: context,
                       initialTime: _deadlineTime,
@@ -235,35 +235,49 @@ class _CreateOrEditTaskScreenState extends State<CreateOrEditTaskScreen> {
 
                           setState(() => _isSubmitting = true);
 
+                          final selectedUser = deptUsers.firstWhere(
+                            (u) => u.id == _selectedAssigneeId,
+                            orElse: () => user,
+                          );
+
                           final newTask = TaskItem(
                             id: widget.taskToEdit?.id,
                             title: _titleController.text.trim(),
                             description: _descController.text.trim(),
                             departmentId: user.departmentId,
-                            creatorId: user.id,
+                            creatorId: widget.taskToEdit?.creatorId ?? user.id,
                             assigneeId: _selectedAssigneeId!,
                             priority: _selectedPriority,
                             status: widget.taskToEdit?.status ?? 'TODO',
                             progressPercent: widget.taskToEdit?.progressPercent ?? 0,
                             deadline: deadlineString,
-                            createdAt: DateFormat('yyyy-MM-dd HH:mm')
-                                .format(DateTime.now()),
+                            createdAt: widget.taskToEdit?.createdAt ??
+                                DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now()),
+                            assigneeName: selectedUser.fullName,
+                            assigneeAvatar: selectedUser.avatarUrl,
+                            creatorName: widget.taskToEdit?.creatorName ?? user.fullName,
+                            departmentName: widget.taskToEdit?.departmentName,
+                            commentCount: widget.taskToEdit?.commentCount ?? 0,
                           );
 
                           if (widget.taskToEdit == null) {
                             await taskProv.createTask(newTask);
+                          } else {
+                            await taskProv.updateTask(newTask);
                           }
 
                           setState(() => _isSubmitting = false);
 
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Đã lưu công việc thành công!'),
+                              SnackBar(
+                                content: Text(widget.taskToEdit == null
+                                    ? 'Đã tạo công việc thành công!'
+                                    : 'Đã cập nhật công việc thành công!'),
                                 backgroundColor: AppColors.success,
                               ),
                             );
-                            Navigator.pop(context);
+                            Navigator.pop(context, true);
                           }
                         },
                 ),

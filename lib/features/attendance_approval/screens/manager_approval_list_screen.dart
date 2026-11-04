@@ -114,7 +114,7 @@ class _ManagerApprovalListScreenState extends State<ManagerApprovalListScreen>
             if (pending.isNotEmpty)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                color: AppColors.primary.withOpacity(0.06),
+                color: AppColors.primary.withValues(alpha: 0.06),
                 child: Row(
                   children: [
                     Text(
@@ -170,7 +170,7 @@ class _ManagerApprovalListScreenState extends State<ManagerApprovalListScreen>
 
                               if (confirm == true && user != null) {
                                 await approvalProv.approveBatch(user.id);
-                                if (mounted) {
+                                if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(

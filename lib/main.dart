@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'core/constants/app_theme.dart';
@@ -15,6 +16,10 @@ import 'features/department_tasks/providers/task_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Khởi tạo dữ liệu ngôn ngữ tiếng Việt cho thư viện intl
+  await initializeDateFormatting('vi_VN', null);
+  await initializeDateFormatting('vi', null);
 
   // Khởi tạo hệ thống thông báo nội bộ
   await NotificationService.instance.init();

@@ -62,8 +62,8 @@ class ProfileScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: user.isManager
-                          ? AppColors.accent.withOpacity(0.12)
-                          : AppColors.secondary.withOpacity(0.12),
+                          ? AppColors.accent.withValues(alpha: 0.12)
+                          : AppColors.secondary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -103,7 +103,15 @@ class ProfileScreen extends StatelessWidget {
                   const Divider(height: 24),
                   _buildInfoTile(Icons.email_outlined, 'Email', user.email),
                   _buildInfoTile(Icons.phone_outlined, 'Số điện thoại', user.phone ?? '0901234567'),
-                  _buildInfoTile(Icons.apartment_outlined, 'Phòng ban', 'Phòng Công nghệ Thông tin (IT)'),
+                  _buildInfoTile(
+                    Icons.apartment_outlined,
+                    'Phòng ban',
+                    user.departmentId == 1
+                        ? 'Phòng Công nghệ Thông tin (IT)'
+                        : (user.departmentId == 2
+                            ? 'Phòng Nhân sự & Hành chính (HR)'
+                            : 'Phòng Kinh doanh & Tiếp thị (Sales)'),
+                  ),
                   _buildInfoTile(Icons.calendar_today_outlined, 'Ngày vào làm', user.startDate),
                   _buildInfoTile(
                     Icons.event_repeat_outlined,

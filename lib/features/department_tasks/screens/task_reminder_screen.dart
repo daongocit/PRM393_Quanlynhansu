@@ -165,7 +165,7 @@ class _TaskReminderScreenState extends State<TaskReminderScreen> {
                   firstDate: DateTime.now().subtract(const Duration(days: 1)),
                   lastDate: DateTime.now().add(const Duration(days: 60)),
                 );
-                if (d != null && mounted) {
+                if (d != null && context.mounted) {
                   final t = await showTimePicker(
                     context: context,
                     initialTime: _reminderTime,
@@ -258,7 +258,7 @@ class _TaskReminderScreenState extends State<TaskReminderScreen> {
 
                         setState(() => _isSaving = false);
 
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(

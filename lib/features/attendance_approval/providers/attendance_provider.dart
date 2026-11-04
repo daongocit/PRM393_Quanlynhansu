@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import '../../../core/database/database_helper.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/models/attendance_model.dart';
 
 class AttendanceProvider extends ChangeNotifier {
@@ -21,9 +21,9 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _todayAttendance = await DatabaseHelper.instance.getTodayAttendance(userId, todayDateStr);
-      _history = await DatabaseHelper.instance.getUserAttendanceHistory(userId);
-      _deptTodayAttendance = await DatabaseHelper.instance.getDepartmentTodayAttendance(deptId, todayDateStr);
+      _todayAttendance = await AppDatabase.instance.getTodayAttendance(userId, todayDateStr);
+      _history = await AppDatabase.instance.getUserAttendanceHistory(userId);
+      _deptTodayAttendance = await AppDatabase.instance.getDepartmentTodayAttendance(deptId, todayDateStr);
     } catch (e) {
       debugPrint('Load attendance error: $e');
     } finally {
@@ -32,18 +32,37 @@ class AttendanceProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadDepartmentAttendanceForDate(int deptId, String date) async {
+    try {
+      _deptTodayAttendance = await AppDatabase.instance.getDepartmentTodayAttendance(deptId, date);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Load dept attendance for date error: $e');
+    }
+  }
+
   Future<bool> checkIn(int userId, String shiftCode) async {
     final now = DateTime.now();
     final timeStr = DateFormat('HH:mm:ss').format(now);
 
-    // Business Rule kiểm tra đi trễ:
-    // Ca CA01 (8:00 - 17:00), sau 8:15 coi là đi trễ LATE
+    // Business Rule kiểm tra đi trễ theo từng ca làm việc:
+    // Ca CA01 (08:00 - 17:00), sau 08:15 coi là đi trễ LATE
+    // Ca CA02 (14:00 - 22:00), sau 14:15 coi là đi trễ LATE
     String status = 'ON_TIME';
+    String note = 'Chấm công đúng giờ';
+
+    final hour = now.hour;
+    final minute = now.minute;
+
     if (shiftCode == 'CA01') {
-      final hour = now.hour;
-      final minute = now.minute;
       if (hour > 8 || (hour == 8 && minute > 15)) {
         status = 'LATE';
+        note = 'Đi trễ sau 08:15 (Yêu cầu giải trình)';
+      }
+    } else if (shiftCode == 'CA02') {
+      if (hour > 14 || (hour == 14 && minute > 15)) {
+        status = 'LATE';
+        note = 'Đi trễ sau 14:15 (Yêu cầu giải trình)';
       }
     }
 
@@ -53,10 +72,10 @@ class AttendanceProvider extends ChangeNotifier {
       checkInTime: timeStr,
       status: status,
       shiftCode: shiftCode,
-      note: status == 'LATE' ? 'Đi trễ sau 08:15 (Yêu cầu giải trình)' : 'Chấm công đúng giờ',
+      note: note,
     );
 
-    final id = await DatabaseHelper.instance.insertAttendance(newAttendance);
+    final id = await AppDatabase.instance.insertAttendance(newAttendance);
     _todayAttendance = newAttendance.copyWith(id: id);
     _history.insert(0, _todayAttendance!);
 
@@ -70,7 +89,7 @@ class AttendanceProvider extends ChangeNotifier {
     final now = DateTime.now();
     final timeStr = DateFormat('HH:mm:ss').format(now);
 
-    // Tính số giờ làm
+    // Tính số giờ làm thực tế
     double workHours = 8.0;
     if (_todayAttendance!.checkInTime != null) {
       try {
@@ -85,12 +104,33 @@ class AttendanceProvider extends ChangeNotifier {
       } catch (_) {}
     }
 
+    String status = _todayAttendance!.status;
+    String note = _todayAttendance!.note ?? '';
+
+    // Business Rule kiểm tra ra về sớm:
+    // Ca CA01 kết thúc lúc 17:00, nếu checkout trước 17:00
+    // Ca CA02 kết thúc lúc 22:00, nếu checkout trước 22:00
+    final shiftCode = _todayAttendance!.shiftCode;
+    bool isEarly = false;
+    if (shiftCode == 'CA01' && now.hour < 17) {
+      isEarly = true;
+    } else if (shiftCode == 'CA02' && now.hour < 22) {
+      isEarly = true;
+    }
+
+    if (isEarly && status == 'ON_TIME') {
+      status = 'EARLY_LEAVE';
+      note = 'Về sớm trước giờ kết thúc ca (ra lúc $timeStr)';
+    }
+
     final updated = _todayAttendance!.copyWith(
       checkOutTime: timeStr,
       workHours: workHours > 0 ? workHours : 8.0,
+      status: status,
+      note: note,
     );
 
-    await DatabaseHelper.instance.updateAttendance(updated);
+    await AppDatabase.instance.updateAttendance(updated);
     _todayAttendance = updated;
 
     // Cập nhật lại trong history

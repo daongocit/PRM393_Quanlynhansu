@@ -17,6 +17,34 @@ class DepartmentAttendanceReportScreen extends StatefulWidget {
 
 class _DepartmentAttendanceReportScreenState
     extends State<DepartmentAttendanceReportScreen> {
+  DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final deptId = auth.currentUser?.departmentId ?? 1;
+      final attProv = Provider.of<AttendanceProvider>(context, listen: false);
+
+      // Nếu ngày hiện tại chưa có ai điểm danh, tự động gợi ý ngày dữ liệu mẫu 12/10/2026
+      if (attProv.deptTodayAttendance.isEmpty ||
+          attProv.deptTodayAttendance.every((a) => a.checkInTime == null)) {
+        setState(() => _selectedDate = DateTime(2026, 10, 12));
+        attProv.loadDepartmentAttendanceForDate(deptId, '2026-10-12');
+      }
+    });
+  }
+
+  void _changeDate(DateTime newDate) {
+    setState(() => _selectedDate = newDate);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final deptId = auth.currentUser?.departmentId ?? 1;
+    final dateStr = DateFormat('yyyy-MM-dd').format(newDate);
+    Provider.of<AttendanceProvider>(context, listen: false)
+        .loadDepartmentAttendanceForDate(deptId, dateStr);
+  }
+
   @override
   Widget build(BuildContext context) {
     final attProv = Provider.of<AttendanceProvider>(context);
@@ -31,7 +59,11 @@ class _DepartmentAttendanceReportScreenState
         ? ((presentCount / totalMembers) * 100).toStringAsFixed(0)
         : '100';
 
-    final todayStr = DateFormat('dd/MM/yyyy').format(DateTime.now());
+    final selectedDateStr = DateFormat('dd/MM/yyyy').format(_selectedDate);
+    final isToday = DateFormat('yyyy-MM-dd').format(_selectedDate) ==
+        DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final isSampleDate =
+        DateFormat('yyyy-MM-dd').format(_selectedDate) == '2026-10-12';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -44,6 +76,52 @@ class _DepartmentAttendanceReportScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Thanh chuyển đổi ngày báo cáo
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('Hôm nay'),
+                    selected: isToday,
+                    onSelected: (val) {
+                      if (val) _changeDate(DateTime.now());
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Mẫu (12/10)'),
+                    selected: isSampleDate,
+                    onSelected: (val) {
+                      if (val) _changeDate(DateTime(2026, 10, 12));
+                    },
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Chọn ngày báo cáo',
+                    icon: const Icon(Icons.calendar_month, color: AppColors.primary),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2026, 1, 1),
+                        lastDate: DateTime(2026, 12, 31),
+                      );
+                      if (picked != null) {
+                        _changeDate(picked);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+
             // Header Card Thống kê phòng ban
             Container(
               padding: const EdgeInsets.all(20),
@@ -52,7 +130,7 @@ class _DepartmentAttendanceReportScreenState
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.2),
+                    color: AppColors.primary.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -79,7 +157,7 @@ class _DepartmentAttendanceReportScreenState
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          todayStr,
+                          selectedDateStr,
                           style: const TextStyle(color: Colors.white, fontSize: 12),
                         ),
                       ),

@@ -27,13 +27,13 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     if (kIsWeb) {
       // In web, fallback or default sqflite
-    } else if (Platform.isWindows || Platform.isLinux) {
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
 
     String path;
-    if (Platform.isWindows || Platform.isLinux) {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       final docDir = await getApplicationDocumentsDirectory();
       path = join(docDir.path, 'HRM_App_Data', filePath);
       final dir = Directory(dirname(path));
@@ -47,9 +47,56 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        await _onOpenDB(db);
+      },
+      onOpen: _onOpenDB,
     );
+  }
+
+  Future<void> _onOpenDB(Database db) async {
+    // Đảm bảo Hoàng Nam (Nhân viên 2 năm thâm niên) luôn tồn tại ngay cả trên SQLite DB đã tạo trước đó
+    try {
+      final existing = await db.rawQuery('SELECT id FROM users WHERE email = ?', ['hoangnam@company.com']);
+      if (existing.isEmpty) {
+        await db.rawInsert('''
+          INSERT OR IGNORE INTO users (id, email, full_name, avatar_url, role, department_id, position, start_date, annual_leave_quota, phone) VALUES
+          (5, 'hoangnam@company.com', 'Hoàng Nam', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150', 'EMPLOYEE', 1, 'Senior Mobile Developer (Thâm niên 2 năm)', '2024-10-15', 12, '0945678901')
+        ''');
+        await db.rawInsert('''
+          INSERT OR IGNORE INTO user_shift_assignments (user_id, shift_code, date, note) VALUES
+          (5, 'CA01', '2026-10-12', 'Lịch làm việc chuẩn'),
+          (5, 'CA01', '2026-10-13', 'Lịch làm việc chuẩn'),
+          (5, 'CA01', '2026-10-14', 'Lịch làm việc chuẩn'),
+          (5, 'CA01', '2026-10-15', 'Lịch làm việc chuẩn'),
+          (5, 'CA01', '2026-10-16', 'Lịch làm việc chuẩn')
+        ''');
+        await db.rawInsert('''
+          INSERT OR IGNORE INTO attendance (user_id, date, check_in_time, check_out_time, status, work_hours, note, shift_code) VALUES
+          (5, '2026-10-05', '07:50:00', '17:05:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+          (5, '2026-10-06', '07:55:00', '17:00:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+          (5, '2026-10-07', '07:52:00', '17:10:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+          (5, '2026-10-08', '08:00:00', '17:02:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+          (5, '2026-10-09', '07:50:00', '17:00:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+          (5, '2026-10-12', '07:55:00', NULL, 'ON_TIME', 0.0, 'Đang làm việc', 'CA01')
+        ''');
+        await db.rawInsert('''
+          INSERT OR IGNORE INTO leave_requests (id, user_id, request_type, from_date, to_date, total_days, reason, status, approver_id, manager_comment, created_at) VALUES
+          (6, 5, 'ANNUAL_LEAVE', '2026-08-10', '2026-08-11', 2.0, 'Nghỉ mát hè cùng gia đình', 'APPROVED', 1, 'Đã phê duyệt cho Hoàng Nam.', '2026-08-05 08:30:00'),
+          (7, 5, 'ANNUAL_LEAVE', '2026-09-22', '2026-09-22', 1.0, 'Giải quyết thủ tục hành chính', 'APPROVED', 1, 'Đã duyệt.', '2026-09-18 10:15:00')
+        ''');
+        await db.rawInsert('''
+          INSERT OR IGNORE INTO tasks (id, title, description, department_id, creator_id, assignee_id, priority, status, progress_percent, deadline, created_at) VALUES
+          (5, 'Nâng cấp Kiến trúc Clean Architecture & Caching', 'Tối ưu hóa performance và refactor codebase dự án HRM theo chuẩn Micro-services.', 1, 1, 5, 'HIGH', 'IN_PROGRESS', 60, '2026-10-22 18:00', '2026-10-10 08:30')
+        ''');
+        await db.rawInsert('''
+          INSERT OR IGNORE INTO task_comments (task_id, user_id, content, created_at) VALUES
+          (5, 5, 'Em đã hoàn tất thiết kế module Caching offline, hiệu năng truy vấn tăng 40% anh Ngọc nhé!', '2026-10-12 11:00:00')
+        ''');
+      }
+    } catch (_) {}
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -198,16 +245,18 @@ class DatabaseHelper {
       (3, 'Phòng Kinh doanh & Tiếp thị', 'SALES_DEPT', 'Bán hàng và Chăm sóc khách hàng')
     ''');
 
-    // 2. Users (3 thành viên nhóm + Quản lý HR)
+    // 2. Users (3 thành viên nhóm + Quản lý HR + Nhân viên thâm niên 2 năm)
     // Duy Ngọc: MANAGER (IT Department)
     // Uyên: EMPLOYEE (Start: 2026-07-12 -> 3 tháng thâm niên!)
     // P.Anh: EMPLOYEE (Start: 2026-06-01 -> 4 tháng thâm niên!)
+    // Hoàng Nam: EMPLOYEE (Start: 2024-10-15 -> 2 năm / 24 tháng thâm niên -> Thưởng +2 ngày phép!)
     await db.rawInsert('''
       INSERT INTO users (id, email, full_name, avatar_url, role, department_id, position, start_date, annual_leave_quota, phone) VALUES
       (1, 'duyngoc@company.com', 'Duy Ngọc', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', 'MANAGER', 1, 'Trưởng bộ phận Kỹ thuật IT', '2024-01-15', 12, '0901234567'),
       (2, 'uyen@company.com', 'Uyên', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', 'EMPLOYEE', 1, 'Flutter Mobile Developer', '2026-07-12', 12, '0912345678'),
       (3, 'panh@company.com', 'P.Anh', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', 'EMPLOYEE', 1, 'UI/UX & Mobile Specialist', '2026-06-01', 12, '0923456789'),
-      (4, 'tranhr@company.com', 'Trần Thảo (HR)', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150', 'MANAGER', 2, 'Giám đốc Nhân sự & Đào tạo', '2023-03-01', 12, '0934567890')
+      (4, 'tranhr@company.com', 'Trần Thảo (HR)', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150', 'MANAGER', 2, 'Giám đốc Nhân sự & Đào tạo', '2023-03-01', 12, '0934567890'),
+      (5, 'hoangnam@company.com', 'Hoàng Nam', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150', 'EMPLOYEE', 1, 'Senior Mobile Developer (Thâm niên 2 năm)', '2024-10-15', 12, '0945678901')
     ''');
 
     // 3. Shifts
@@ -228,7 +277,12 @@ class DatabaseHelper {
       (2, 'CA01', '2026-10-16', 'Lịch làm việc chuẩn'),
       (3, 'CA01', '2026-10-12', 'Lịch làm việc chuẩn'),
       (3, 'CA01', '2026-10-13', 'Lịch làm việc chuẩn'),
-      (1, 'CA01', '2026-10-12', 'Ca hành chính quản lý')
+      (1, 'CA01', '2026-10-12', 'Ca hành chính quản lý'),
+      (5, 'CA01', '2026-10-12', 'Lịch làm việc chuẩn'),
+      (5, 'CA01', '2026-10-13', 'Lịch làm việc chuẩn'),
+      (5, 'CA01', '2026-10-14', 'Lịch làm việc chuẩn'),
+      (5, 'CA01', '2026-10-15', 'Lịch làm việc chuẩn'),
+      (5, 'CA01', '2026-10-16', 'Lịch làm việc chuẩn')
     ''');
 
     // 5. Attendance (Historical records for October 2026)
@@ -240,20 +294,27 @@ class DatabaseHelper {
       (2, '2026-10-08', '07:58:00', '17:00:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
       (2, '2026-10-09', '07:52:00', '16:00:00', 'EARLY_LEAVE', 7.0, 'Xin về sớm việc gia đình', 'CA01'),
       (3, '2026-10-12', '07:50:00', NULL, 'ON_TIME', 0.0, 'Đang làm việc', 'CA01'),
-      (1, '2026-10-12', '08:05:00', NULL, 'ON_TIME', 0.0, 'Đang làm việc', 'CA01')
+      (1, '2026-10-12', '08:05:00', NULL, 'ON_TIME', 0.0, 'Đang làm việc', 'CA01'),
+      (5, '2026-10-05', '07:50:00', '17:05:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+      (5, '2026-10-06', '07:55:00', '17:00:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+      (5, '2026-10-07', '07:52:00', '17:10:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+      (5, '2026-10-08', '08:00:00', '17:02:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+      (5, '2026-10-09', '07:50:00', '17:00:00', 'ON_TIME', 8.0, 'Đúng giờ', 'CA01'),
+      (5, '2026-10-12', '07:55:00', NULL, 'ON_TIME', 0.0, 'Đang làm việc', 'CA01')
     ''');
 
-    // 6. Leave Requests (Chính xác ví dụ Business Rule từ ảnh 2!)
-    // Uyên làm 3 tháng (từ 12/07/2026 tới 12/10/2026): Quota = 3 ngày.
-    // Đã nghỉ 2 ngày: 1 ngày nghỉ phép năm (APPROVED) + 1 ngày nghỉ phép năm khác (APPROVED).
-    // Do đó: Còn lại đúng 1 ngày khả dụng!
+    // 6. Leave Requests (So sánh rõ nét Business Rule theo thâm niên!)
+    // - Uyên (3 tháng): Quota = 3 ngày. Nghỉ 2 ngày -> Còn lại 1 ngày khả dụng.
+    // - Hoàng Nam (2 năm thâm niên): Quota = 12 + 2 = 14 ngày. Nghỉ 3 ngày -> Còn lại 11 ngày khả dụng!
     await db.rawInsert('''
       INSERT INTO leave_requests (id, user_id, request_type, from_date, to_date, total_days, reason, status, approver_id, manager_comment, created_at) VALUES
       (1, 2, 'ANNUAL_LEAVE', '2026-08-20', '2026-08-20', 1.0, 'Giải quyết việc riêng gia đình ở quê', 'APPROVED', 1, 'Đồng ý cho bạn nghỉ.', '2026-08-15 09:30:00'),
       (2, 2, 'ANNUAL_LEAVE', '2026-09-15', '2026-09-15', 1.0, 'Khám sức khỏe định kỳ', 'APPROVED', 1, 'Đã duyệt.', '2026-09-12 14:00:00'),
       (3, 3, 'ANNUAL_LEAVE', '2026-10-20', '2026-10-20', 1.0, 'Về quê ăn cưới bạn thân', 'PENDING', NULL, NULL, '2026-10-11 10:15:00'),
       (4, 3, 'LATE_EXPLANATION', '2026-10-07', '2026-10-07', 0.0, 'Quên quẹt thẻ do hệ thống cửa vân tay bảo trì', 'PENDING', NULL, NULL, '2026-10-08 08:30:00'),
-      (5, 2, 'SHIFT_SWAP', '2026-10-15', '2026-10-15', 0.0, 'Xin đổi ca CA02 sang ca CA01 cùng P.Anh', 'PENDING', NULL, NULL, '2026-10-12 08:00:00')
+      (5, 2, 'SHIFT_SWAP', '2026-10-15', '2026-10-15', 0.0, 'Xin đổi ca CA02 sang ca CA01 cùng P.Anh', 'PENDING', NULL, NULL, '2026-10-12 08:00:00'),
+      (6, 5, 'ANNUAL_LEAVE', '2026-08-10', '2026-08-11', 2.0, 'Nghỉ mát hè cùng gia đình', 'APPROVED', 1, 'Đã phê duyệt cho Hoàng Nam.', '2026-08-05 08:30:00'),
+      (7, 5, 'ANNUAL_LEAVE', '2026-09-22', '2026-09-22', 1.0, 'Giải quyết thủ tục hành chính', 'APPROVED', 1, 'Đã duyệt.', '2026-09-18 10:15:00')
     ''');
 
     // 7. Tasks
@@ -262,7 +323,8 @@ class DatabaseHelper {
       (1, 'Thiết kế giao diện HRM theo chuẩn ASOFT', 'Hoàn thiện 5 màn hình đơn từ & Quỹ phép cho nhân sự trải nghiệm mượt mà trực quan.', 1, 1, 2, 'HIGH', 'IN_PROGRESS', 70, '2026-10-18 17:00', '2026-10-10 09:00'),
       (2, 'Xây dựng Bảng Kanban & Tương tác Task', 'Xây dựng tính năng kéo thả công việc, xem deadline, trao đổi comment cùng phòng ban.', 1, 1, 3, 'HIGH', 'IN_PROGRESS', 50, '2026-10-20 18:00', '2026-10-10 10:00'),
       (3, 'Tối ưu hóa chấm công GPS & Quản lý duyệt đơn', 'Hoàn thiện tính năng Điểm danh Check-in/Out, bắt lỗi đi trễ và chức năng duyệt hàng loạt cho Manager.', 1, 1, 1, 'MEDIUM', 'IN_PROGRESS', 80, '2026-10-19 12:00', '2026-10-09 14:00'),
-      (4, 'Báo cáo tổng hợp chấm công tháng 10', 'Tổng hợp số liệu ngày công thực tế, ngày nghỉ phép của toàn bộ phòng ban IT.', 1, 1, 2, 'LOW', 'TODO', 0, '2026-10-25 17:00', '2026-10-12 08:30')
+      (4, 'Báo cáo tổng hợp chấm công tháng 10', 'Tổng hợp số liệu ngày công thực tế, ngày nghỉ phép của toàn bộ phòng ban IT.', 1, 1, 2, 'LOW', 'TODO', 0, '2026-10-25 17:00', '2026-10-12 08:30'),
+      (5, 'Nâng cấp Kiến trúc Clean Architecture & Caching', 'Tối ưu hóa performance và refactor codebase dự án HRM theo chuẩn Micro-services.', 1, 1, 5, 'HIGH', 'IN_PROGRESS', 60, '2026-10-22 18:00', '2026-10-10 08:30')
     ''');
 
     // 8. Task Comments
@@ -271,7 +333,8 @@ class DatabaseHelper {
       (1, 2, 'Đã kết nối với Database SQLite, màn hình Quỹ phép thể hiện đúng 3 tháng tối đa 3 ngày nghỉ rồi anh Ngọc nhé!', '2026-10-11 11:30:00'),
       (1, 1, 'Rất tốt Uyên ơi! Nhớ bổ sung tính năng chặn gửi đơn khi nhân viên xin vượt quá số ngày phép còn lại nhé.', '2026-10-11 13:45:00'),
       (2, 3, 'Em đang cài đặt hệ thống Notification nhắc nhở deadline trước 1 tiếng cho các task khẩn cấp.', '2026-10-12 09:15:00'),
-      (2, 1, 'Ok P.Anh, nhớ cho phép tất cả thành viên trong phòng IT đều đọc và comment được nhé.', '2026-10-12 10:00:00')
+      (2, 1, 'Ok P.Anh, nhớ cho phép tất cả thành viên trong phòng IT đều đọc và comment được nhé.', '2026-10-12 10:00:00'),
+      (5, 5, 'Em đã hoàn tất thiết kế module Caching offline, hiệu năng truy vấn tăng 40% anh Ngọc nhé!', '2026-10-12 11:00:00')
     ''');
 
     // 9. Task Reminders

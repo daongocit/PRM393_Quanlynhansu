@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../../../core/database/database_helper.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/models/user_model.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -18,14 +18,10 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _availableUsers = await DatabaseHelper.instance.getAllUsers();
-      // Default to Uyên (Employee) for employee demo, or Duy Ngọc for Manager demo
-      if (_availableUsers.isNotEmpty) {
-        _currentUser = _availableUsers.firstWhere(
-          (u) => u.fullName == 'Uyên',
-          orElse: () => _availableUsers.first,
-        );
-      }
+      _availableUsers = await AppDatabase.instance.getAllUsers();
+      // Giữ currentUser = null lúc khởi động ban đầu để hiển thị màn hình LoginScreen
+      // Giảng viên & người dùng có thể thấy nút Google Sign-in và 3 tài khoản demo
+      _currentUser = null;
     } catch (e) {
       debugPrint('Auth init error: $e');
     } finally {
@@ -38,7 +34,7 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final user = await DatabaseHelper.instance.getUserById(userId);
+    final user = await AppDatabase.instance.getUserById(userId);
     if (user != null) {
       _currentUser = user;
     }

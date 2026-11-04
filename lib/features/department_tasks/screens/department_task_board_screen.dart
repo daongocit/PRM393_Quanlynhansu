@@ -44,18 +44,30 @@ class _DepartmentTaskBoardScreenState extends State<DepartmentTaskBoardScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add_task, color: Colors.white),
-        label: const Text('Giao việc mới', style: TextStyle(color: Colors.white)),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const CreateOrEditTaskScreen(),
-            ),
-          );
-        },
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppColors.primaryGlow,
+        ),
+        child: FloatingActionButton.extended(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          highlightElevation: 0,
+          icon: const Icon(Icons.add_task_rounded, color: Colors.white),
+          label: const Text(
+            'Giao việc mới',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const CreateOrEditTaskScreen(),
+              ),
+            );
+          },
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -64,17 +76,24 @@ class _DepartmentTaskBoardScreenState extends State<DepartmentTaskBoardScreen> {
               title: 'Công Việc Phòng Ban',
               subtitle: 'Theo dõi tiến độ, phân công nhiệm vụ & trao đổi nội bộ',
               actions: [
-                IconButton(
-                  tooltip: 'Tạo công việc mới',
-                  icon: const Icon(Icons.add, color: AppColors.primary),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const CreateOrEditTaskScreen(),
-                      ),
-                    );
-                  },
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: IconButton(
+                    tooltip: 'Tạo công việc mới',
+                    icon: const Icon(Icons.add_rounded, color: AppColors.primary, size: 20),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CreateOrEditTaskScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -327,14 +346,17 @@ class _DepartmentTaskBoardScreenState extends State<DepartmentTaskBoardScreen> {
     final isSelected = prov.selectedStatusFilter == filterKey;
     return GestureDetector(
       onTap: () => prov.setStatusFilter(filterKey),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.cardBorder,
+            width: 1.2,
           ),
+          boxShadow: isSelected ? AppColors.primaryGlow : AppColors.softShadow,
         ),
         child: Row(
           children: [
@@ -342,23 +364,23 @@ class _DepartmentTaskBoardScreenState extends State<DepartmentTaskBoardScreen> {
               label,
               style: TextStyle(
                 color: isSelected ? Colors.white : AppColors.textPrimary,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 12.5,
               ),
             ),
             const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white24 : AppColors.background,
-                borderRadius: BorderRadius.circular(8),
+                color: isSelected ? Colors.white.withValues(alpha: 0.22) : AppColors.surfaceSubtle,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 count,
                 style: TextStyle(
                   color: isSelected ? Colors.white : AppColors.textSecondary,
                   fontSize: 11,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),

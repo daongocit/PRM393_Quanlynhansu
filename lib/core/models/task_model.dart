@@ -65,7 +65,9 @@ class TaskItem {
 
   bool get isOverdue {
     try {
-      final deadlineDate = DateTime.parse(deadline);
+      String str = deadline.trim().replaceFirst(' ', 'T');
+      if (str.length == 16) str = '$str:00';
+      final deadlineDate = DateTime.parse(str);
       return DateTime.now().isAfter(deadlineDate) && status != 'DONE';
     } catch (_) {
       return false;

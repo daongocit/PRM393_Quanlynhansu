@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/models/attendance_model.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../providers/attendance_provider.dart';
@@ -15,13 +16,23 @@ class AttendanceHistoryScreen extends StatefulWidget {
 }
 
 class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
-  DateTime _focusedDay = DateTime.now();
+  DateTime _focusedDay = DateTime(2026, 10, 12);
   DateTime? _selectedDay;
+
+  List<Attendance> _getEventsForDay(DateTime day, List<Attendance> history) {
+    final dayStr = DateFormat('yyyy-MM-dd').format(day);
+    return history.where((a) => a.date == dayStr).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final attProv = Provider.of<AttendanceProvider>(context);
     final history = attProv.history;
+
+    // Lọc theo ngày chọn trên lịch (nếu có)
+    final displayedHistory = _selectedDay == null
+        ? history
+        : history.where((a) => a.date == DateFormat('yyyy-MM-dd').format(_selectedDay!)).toList();
 
     // Tính toán số liệu thống kê
     final totalDays = history.length;
@@ -92,20 +103,45 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: TableCalendar(
+                child: TableCalendar<Attendance>(
                   firstDay: DateTime.utc(2026, 1, 1),
                   lastDay: DateTime.utc(2026, 12, 31),
                   focusedDay: _focusedDay,
                   selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                  eventLoader: (day) => _getEventsForDay(day, history),
                   onDaySelected: (selectedDay, focusedDay) {
                     setState(() {
-                      _selectedDay = selectedDay;
+                      if (_selectedDay != null && isSameDay(_selectedDay, selectedDay)) {
+                        _selectedDay = null; // Bấm lần 2 để bỏ chọn
+                      } else {
+                        _selectedDay = selectedDay;
+                      }
                       _focusedDay = focusedDay;
                     });
                   },
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (context, day, events) {
+                      if (events.isEmpty) return null;
+                      final att = events.first;
+                      Color dotColor = AppColors.success;
+                      if (att.status == 'LATE') dotColor = AppColors.error;
+                      if (att.status == 'EARLY_LEAVE') dotColor = AppColors.warning;
+                      return Positioned(
+                        bottom: 4,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: dotColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   calendarStyle: CalendarStyle(
                     todayDecoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
                     ),
                     selectedDecoration: const BoxDecoration(
@@ -124,30 +160,46 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
             const SizedBox(height: 24),
 
-            const Text(
-              'Lịch sử quẹt thẻ chi tiết',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _selectedDay != null
+                      ? 'Lịch sử ngày ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}'
+                      : 'Lịch sử quẹt thẻ chi tiết',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                if (_selectedDay != null)
+                  TextButton(
+                    onPressed: () => setState(() => _selectedDay = null),
+                    child: const Text('Xem tất cả'),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
 
-            if (history.isEmpty)
-              const Center(
+            if (displayedHistory.isEmpty)
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('Chưa có dữ liệu chấm công.'),
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    _selectedDay != null
+                        ? 'Không có dữ liệu quẹt thẻ cho ngày đã chọn.'
+                        : 'Chưa có dữ liệu chấm công.',
+                  ),
                 ),
               )
             else
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: history.length,
+                itemCount: displayedHistory.length,
                 itemBuilder: (context, index) {
-                  final item = history[index];
+                  final item = displayedHistory[index];
                   DateTime? dt;
                   try {
                     dt = DateTime.parse(item.date);

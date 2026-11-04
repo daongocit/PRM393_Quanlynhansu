@@ -114,85 +114,121 @@ class ShiftScheduleScreen extends StatelessWidget {
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.cardBorder),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isNight
-                                ? AppColors.accent.withOpacity(0.12)
-                                : AppColors.primary.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        DateTime? dt;
+                        try {
+                          dt = DateTime.parse(s.date);
+                        } catch (_) {}
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CreateLeaveRequestScreen(
+                              initialType: 'SHIFT_SWAP',
+                              initialDate: dt,
+                              initialReason:
+                                  'Xin đổi ca ${s.shiftCode} (${s.shiftName ?? "Ca làm việc"}) ngày ${s.date}',
+                            ),
                           ),
-                          child: Icon(
-                            isNight ? Icons.nightlight_round : Icons.wb_sunny,
-                            color: isNight ? AppColors.accent : AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                dateStr,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  color: AppColors.textPrimary,
-                                ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isNight
+                                    ? AppColors.accent.withValues(alpha: 0.12)
+                                    : AppColors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${s.shiftName ?? s.shiftCode} (${s.startTime ?? "--"} - ${s.endTime ?? "--"})',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: isNight
-                                      ? AppColors.accent
-                                      : AppColors.primary,
-                                ),
+                              child: Icon(
+                                isNight ? Icons.nightlight_round : Icons.wb_sunny,
+                                color: isNight ? AppColors.accent : AppColors.primary,
                               ),
-                              if (s.note != null && s.note!.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  s.note!,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    dateStr,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${s.shiftName ?? s.shiftCode} (${s.startTime ?? "--"} - ${s.endTime ?? "--"})',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isNight
+                                          ? AppColors.accent
+                                          : AppColors.primary,
+                                    ),
+                                  ),
+                                  if (s.note != null && s.note!.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      s.note!,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isNight
+                                        ? AppColors.accent.withValues(alpha: 0.1)
+                                        : AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    s.shiftCode,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: isNight
+                                          ? AppColors.accent
+                                          : AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Đổi ca →',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primaryLight,
                                   ),
                                 ),
                               ],
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isNight
-                                ? AppColors.accent.withOpacity(0.1)
-                                : AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            s.shiftCode,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: isNight
-                                  ? AppColors.accent
-                                  : AppColors.primary,
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   );
                 },

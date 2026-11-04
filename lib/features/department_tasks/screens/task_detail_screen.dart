@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/models/task_model.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../providers/task_provider.dart';
+import 'create_or_edit_task_screen.dart';
 import 'task_comments_screen.dart';
 import 'task_reminder_screen.dart';
 
@@ -31,13 +32,41 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final taskProv = Provider.of<TaskProvider>(context);
-    final task = widget.task;
+    // Lấy thông tin task mới nhất từ Provider sau khi chỉnh sửa
+    final task = taskProv.departmentTasks.firstWhere(
+      (t) => t.id == widget.task.id,
+      orElse: () => widget.task,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Chi Tiết Nhiệm Vụ'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Chỉnh sửa nhiệm vụ',
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () async {
+              final result = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreateOrEditTaskScreen(taskToEdit: task),
+                ),
+              );
+              if (result == true && mounted) {
+                final updated = taskProv.departmentTasks.firstWhere(
+                  (t) => t.id == task.id,
+                  orElse: () => task,
+                );
+                setState(() {
+                  _currentProgress = updated.progressPercent.toDouble();
+                  _currentStatus = updated.status;
+                });
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -218,7 +247,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           if (val != null) {
                             setState(() {
                               _currentStatus = val;
-                              if (val == 'DONE') _currentProgress = 100;
+                              if (val == 'DONE') {
+                                _currentProgress = 100;
+                              } else if (val == 'TODO') {
+                                _currentProgress = 0;
+                              } else if (val == 'IN_PROGRESS' &&
+                                  (_currentProgress == 0 || _currentProgress == 100)) {
+                                _currentProgress = 50;
+                              }
                             });
                           }
                         },
@@ -244,7 +280,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                 progressPercent: _currentProgress.toInt(),
                               );
                               setState(() => _isSaving = false);
-                              if (mounted) {
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Đã cập nhật tiến độ công việc!'),
@@ -290,7 +326,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.forum_outlined,
@@ -342,7 +378,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.accent.withOpacity(0.1),
+                              color: AppColors.accent.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.notification_add_outlined,

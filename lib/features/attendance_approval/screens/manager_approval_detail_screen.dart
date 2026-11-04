@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/models/leave_request_model.dart';
+import '../../../core/models/user_model.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../leave_requests/services/leave_calculator.dart';
 import '../providers/approval_provider.dart';
 
 class ManagerApprovalDetailScreen extends StatefulWidget {
@@ -20,6 +23,34 @@ class _ManagerApprovalDetailScreenState
     extends State<ManagerApprovalDetailScreen> {
   final _commentController = TextEditingController();
   bool _isSubmitting = false;
+  User? _applicantUser;
+  LeaveBalanceResult? _applicantBalance;
+  bool _isLoadingApplicant = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadApplicantQuota();
+  }
+
+  Future<void> _loadApplicantQuota() async {
+    try {
+      final user = await AppDatabase.instance.getUserById(widget.request.userId);
+      if (user != null) {
+        final requests = await AppDatabase.instance.getUserLeaveRequests(user.id);
+        final balance = LeaveCalculatorEngine.calculateBalance(user, requests);
+        if (mounted) {
+          setState(() {
+            _applicantUser = user;
+            _applicantBalance = balance;
+            _isLoadingApplicant = false;
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingApplicant = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -154,22 +185,175 @@ class _ManagerApprovalDetailScreenState
 
             const SizedBox(height: 20),
 
-            // Đánh giá Quỹ phép / Business rule info
+            // HỒ SƠ THÂM NIÊN & ĐÁNH GIÁ QUỸ PHÉP (RUBRIC MÀN 4 BẮT BUỘC)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppColors.infoBg.withOpacity(0.5),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                border: Border.all(color: AppColors.cardBorder),
               ),
-              child: const Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, color: AppColors.info),
-                  SizedBox(width: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.account_balance_wallet_outlined,
+                          color: AppColors.primary, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Thẩm định Quỹ phép nhân sự',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_isLoadingApplicant)
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  if (_applicantBalance != null) ...[
+                    if (_applicantUser != null) ...[
+                      _buildDetailRow('Vị trí công tác:', _applicantUser!.position),
+                      _buildDetailRow('Ngày vào làm việc:', _applicantUser!.startDate),
+                    ],
+                    _buildDetailRow('Thâm niên làm việc:',
+                        '${_applicantBalance!.tenureMonths} tháng (${_applicantBalance!.tenureMonths ~/ 12} năm)'),
+                    _buildDetailRow('Hạn mức tích lũy:',
+                        '${_applicantBalance!.accruedDays.toStringAsFixed(0)} ngày'),
+                    _buildDetailRow('Số ngày đã nghỉ duyệt:',
+                        '${_applicantBalance!.usedDays.toStringAsFixed(0)} ngày'),
+                    _buildDetailRow(
+                      'Quota khả dụng còn lại:',
+                      '${_applicantBalance!.remainingDays.toStringAsFixed(0)} ngày',
+                      isBold: true,
+                    ),
+                    const SizedBox(height: 10),
+                    // Nhãn đánh giá tự động
+                    if (req.requestType == 'ANNUAL_LEAVE') ...[
+                      if (req.totalDays > _applicantBalance!.remainingDays)
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.errorBg,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.errorBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded,
+                                  color: AppColors.error, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Cảnh báo: Xin ${req.totalDays} ngày vượt quá quota còn lại (${_applicantBalance!.remainingDays} ngày)!',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.error,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.successBg,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.successBorder),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.check_circle_outline,
+                                  color: AppColors.success, size: 18),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Hợp lệ: Nhân sự đủ quỹ phép năm khả dụng.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ] else
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Loại đơn ${req.typeDisplay}: Không khấu trừ vào quota phép năm.',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                  ] else
+                    const Text('Đang tải dữ liệu quota...'),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // THÔNG TIN QUY TRÌNH DUYỆT PHÂN CẤP (BUSINESS RULE 2)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                    ? AppColors.warningBg
+                    : AppColors.infoBg.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                      ? AppColors.warningBorder
+                      : AppColors.info.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                        ? Icons.alt_route_rounded
+                        : Icons.info_outline,
+                    color: LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                        ? AppColors.warning
+                        : AppColors.info,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Business Rule: Đơn nghỉ dưới 2 ngày được phê duyệt ngay 1 cấp bởi Trưởng phòng.',
-                      style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                      LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                          ? 'Business Rule: Đơn > 2 ngày (${req.totalDays} ngày) yêu cầu phê duyệt 2 cấp (Trưởng bộ phận thẩm định → Giám đốc phê chuẩn).'
+                          : 'Business Rule: Đơn ≤ 2 ngày (${req.totalDays} ngày) được phê duyệt trực tiếp 1 bước bởi Trưởng phòng.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                            ? AppColors.textPrimary
+                            : AppColors.textPrimary,
+                        fontWeight: LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
                     ),
                   ),
                 ],
@@ -230,7 +414,7 @@ class _ManagerApprovalDetailScreenState
                                   user.id,
                                   reason: _commentController.text.trim(),
                                 );
-                                if (mounted) {
+                                if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Đã từ chối đơn thành công!'),
@@ -264,7 +448,7 @@ class _ManagerApprovalDetailScreenState
                                       ? _commentController.text.trim()
                                       : 'Đồng ý duyệt đơn.',
                                 );
-                                if (mounted) {
+                                if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Đã phê duyệt đơn thành công!'),

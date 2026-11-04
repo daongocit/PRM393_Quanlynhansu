@@ -71,17 +71,24 @@ class _AttendanceCheckInScreenState extends State<AttendanceCheckInScreen> {
               title: 'Chấm Công & Điểm Danh',
               subtitle: 'Ca CA01: 08:00 - 17:00 (Hành chính)',
               actions: [
-                IconButton(
-                  tooltip: 'Xem lịch sử chấm công',
-                  icon: const Icon(Icons.history, color: AppColors.primary),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AttendanceHistoryScreen(),
-                      ),
-                    );
-                  },
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: IconButton(
+                    tooltip: 'Xem lịch sử chấm công',
+                    icon: const Icon(Icons.history_rounded, color: AppColors.primary, size: 20),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AttendanceHistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -97,7 +104,7 @@ class _AttendanceCheckInScreenState extends State<AttendanceCheckInScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.errorBg,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                          border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
@@ -139,9 +146,11 @@ class _AttendanceCheckInScreenState extends State<AttendanceCheckInScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              const CreateLeaveRequestScreen(
+                                          builder: (_) => CreateLeaveRequestScreen(
                                             initialType: 'LATE_EXPLANATION',
+                                            initialDate: _currentTime,
+                                            initialReason:
+                                                'Giải trình đi trễ ngày ${DateFormat('dd/MM/yyyy').format(_currentTime)}: ',
                                           ),
                                         ),
                                       );
@@ -158,51 +167,64 @@ class _AttendanceCheckInScreenState extends State<AttendanceCheckInScreen> {
 
                     // Digital Clock Card
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                      padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 22),
                       decoration: BoxDecoration(
-                        gradient: AppColors.cardGradient,
-                        borderRadius: BorderRadius.circular(24),
+                        gradient: AppColors.darkHeroGradient,
+                        borderRadius: BorderRadius.circular(26),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.2),
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.35),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10),
+                          ),
+                          BoxShadow(
+                            color: AppColors.primaryLight.withValues(alpha: 0.15),
                             blurRadius: 16,
-                            offset: const Offset(0, 6),
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: Column(
                         children: [
-                          Text(
-                            dateString.toUpperCase(),
-                            style: const TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.1,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              dateString.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           Text(
                             timeString,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 42,
+                              fontSize: 46,
                               fontWeight: FontWeight.w900,
-                              fontFeatures: [],
+                              letterSpacing: -1,
                             ),
                           ),
                           const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.location_on,
-                                  color: AppColors.secondaryLight, size: 16),
+                              const Icon(Icons.location_on_rounded,
+                                  color: Color(0xFF34D399), size: 16),
                               const SizedBox(width: 6),
-                              const Text(
+                              Text(
                                 'Văn phòng Tầng 8, Tòa nhà FPT, Cầu Giấy',
                                 style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -220,7 +242,7 @@ class _AttendanceCheckInScreenState extends State<AttendanceCheckInScreen> {
                           if (user == null) return;
                           if (!isCheckedIn) {
                             await attProv.checkIn(user.id, 'CA01');
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Điểm danh Check-in thành công!'),
@@ -230,7 +252,7 @@ class _AttendanceCheckInScreenState extends State<AttendanceCheckInScreen> {
                             }
                           } else if (!isCheckedOut) {
                             await attProv.checkOut();
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Điểm danh Check-out thành công!'),
@@ -266,10 +288,12 @@ class _AttendanceCheckInScreenState extends State<AttendanceCheckInScreen> {
                                       ])),
                             boxShadow: [
                               BoxShadow(
-                                color: (!isCheckedIn
-                                        ? AppColors.secondary
-                                        : AppColors.primary)
-                                    .withOpacity(0.35),
+                                color: (isCheckedOut
+                                        ? Colors.grey
+                                        : (!isCheckedIn
+                                            ? AppColors.secondary
+                                            : AppColors.primary))
+                                    .withValues(alpha: 0.35),
                                 blurRadius: 24,
                                 spreadRadius: 4,
                                 offset: const Offset(0, 8),

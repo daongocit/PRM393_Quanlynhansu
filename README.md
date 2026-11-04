@@ -36,14 +36,21 @@
 
 ## II. ĐẶC TẢ BUSINESS RULES (QUY TẮC NGHIỆP VỤ PHỨC TẠP)
 
-### 1. Quy tắc tính Quỹ phép năm theo Thâm niên
-- Nằm trong file: [leave_calculator.dart](file:///e:/PRM/Project/lib/features/leave_requests/services/leave_calculator.dart)
-- **Công thức**: 
+### 1. Quy tắc tính Quỹ phép năm theo Thâm niên & Thưởng thâm niên lâu năm
+- Nằm trong file: [leave_calculator.dart](file:///d:/Ky8/Prm/Project/lib/features/leave_requests/services/leave_calculator.dart)
+- **Công thức tính toán**: 
   - Số tháng thâm niên = `(Ngày hiện tại - Ngày bắt đầu làm việc) / 30 ngày`.
-  - Hạn mức phép năm tích lũy = `min(Số tháng thâm niên, 12 ngày)`.
-  - Phép còn lại = `Hạn mức tích lũy - Tổng số ngày nghỉ phép năm đã APPROVED`.
-- **Ví dụ thực tế trong DB**: Nhân viên Uyên vào làm từ `12/07/2026` đến `12/10/2026` tròn 3 tháng $\rightarrow$ Tối đa được nghỉ **3 ngày**, đã nghỉ **2 ngày** $\rightarrow$ Còn lại đúng **1 ngày khả dụng**.
-- **Validation**: Nếu xin nghỉ phép năm vượt quá 1 ngày hoặc trùng lịch với đơn đang chờ, hệ thống chặn gửi đơn và thông báo lỗi rõ ràng.
+  - **Nhân sự mới (< 12 tháng)**: Hạn mức tích lũy = `Số tháng thâm niên` (1 ngày/tháng).
+  - **Nhân sự từ 1 năm đến dưới 2 năm**: Hạn mức cơ sở = `12 ngày phép/năm`.
+  - **Nhân sự thâm niên lâu năm ($\ge 2$ năm)**: Được thưởng thêm ngày phép theo số năm cống hiến:
+    - *Làm 2 năm (24 - 35 tháng)*: Thưởng **+2 ngày phép** $\rightarrow$ Hạn mức **14 ngày/năm**.
+    - *Làm 3 năm (36 - 47 tháng)*: Thưởng **+3 ngày phép** $\rightarrow$ Hạn mức **15 ngày/năm**.
+    - *Mỗi năm thâm niên tiếp theo*: Cộng thêm 1 ngày phép (tối đa +5 ngày = 17 ngày/năm).
+  - Phép còn lại = `(Hạn mức tích lũy + Thưởng thâm niên) - Tổng số ngày nghỉ phép năm đã APPROVED`.
+- **Ví dụ thực tế trong DB**:
+  - *Nhân sự mới (Uyên)*: Vào làm `12/07/2026` đến `12/10/2026` tròn 3 tháng $\rightarrow$ Hạn mức **3 ngày**, đã nghỉ **2 ngày** $\rightarrow$ Còn lại **1 ngày khả dụng**.
+  - *Nhân sự lâu năm (Duy Ngọc)*: Vào làm `15/01/2024` đến `10/2026` là 33 tháng (> 2 năm) $\rightarrow$ Thưởng **+2 ngày phép thâm niên** $\rightarrow$ Hạn mức **14 ngày phép/năm** (nhiều hơn nhân viên mới).
+- **Validation**: Nếu xin nghỉ vượt quá hạn mức khả dụng hoặc trùng lịch với đơn đang chờ, hệ thống chặn gửi đơn và thông báo lỗi rõ ràng.
 
 ### 2. Quy tắc Phê duyệt Đa cấp (Approval Workflow)
 - Đơn $\le 2$ ngày: Trưởng phòng (`MANAGER`) duyệt 1 bước hoàn tất.

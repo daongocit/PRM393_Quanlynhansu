@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import '../../../core/database/database_helper.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/models/leave_request_model.dart';
 import '../../../core/models/shift_model.dart';
@@ -22,8 +22,8 @@ class LeaveRequestProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _userRequests = await DatabaseHelper.instance.getUserLeaveRequests(user.id);
-      _userShifts = await DatabaseHelper.instance.getUserShifts(user.id);
+      _userRequests = await AppDatabase.instance.getUserLeaveRequests(user.id);
+      _userShifts = await AppDatabase.instance.getUserShifts(user.id);
       _balance = LeaveCalculatorEngine.calculateBalance(user, _userRequests);
     } catch (e) {
       debugPrint('Load leave data error: $e');
@@ -67,7 +67,7 @@ class LeaveRequestProvider extends ChangeNotifier {
       createdAt: DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
     );
 
-    final id = await DatabaseHelper.instance.insertLeaveRequest(newReq);
+    final id = await AppDatabase.instance.insertLeaveRequest(newReq);
     _userRequests.insert(0, newReq.copyWith(id: id));
     _balance = LeaveCalculatorEngine.calculateBalance(user, _userRequests);
 
@@ -78,9 +78,11 @@ class LeaveRequestProvider extends ChangeNotifier {
   Future<bool> cancelRequest(int requestId, User user) async {
     final idx = _userRequests.indexWhere((r) => r.id == requestId);
     if (idx == -1) return false;
+    // Chỉ cho phép hủy khi đơn còn ở trạng thái Chờ phê duyệt (PENDING)
+    if (_userRequests[idx].status != 'PENDING') return false;
 
     final updated = _userRequests[idx].copyWith(status: 'CANCELLED');
-    await DatabaseHelper.instance.updateLeaveRequest(updated);
+    await AppDatabase.instance.updateLeaveRequest(updated);
     _userRequests[idx] = updated;
     _balance = LeaveCalculatorEngine.calculateBalance(user, _userRequests);
 

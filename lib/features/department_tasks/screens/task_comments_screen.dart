@@ -76,7 +76,7 @@ class _TaskCommentsScreenState extends State<TaskCommentsScreen> {
           // Banner thông báo phòng ban (Business Rule đề bài)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: AppColors.primary.withOpacity(0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
             child: const Row(
               children: [
                 Icon(Icons.lock_open_rounded, size: 14, color: AppColors.primary),

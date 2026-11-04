@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import '../../../core/database/database_helper.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/models/task_model.dart';
 import '../../../core/models/task_comment_model.dart';
 import '../../../core/models/task_reminder_model.dart';
@@ -32,7 +32,7 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _departmentTasks = await DatabaseHelper.instance.getTasksByDepartment(deptId);
+      _departmentTasks = await AppDatabase.instance.getTasksByDepartment(deptId);
     } catch (e) {
       debugPrint('Load tasks error: $e');
     } finally {
@@ -42,11 +42,21 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<int> createTask(TaskItem task) async {
-    final id = await DatabaseHelper.instance.insertTask(task);
+    final id = await AppDatabase.instance.insertTask(task);
     final inserted = task.copyWith(id: id);
     _departmentTasks.insert(0, inserted);
     notifyListeners();
     return id;
+  }
+
+  Future<bool> updateTask(TaskItem task) async {
+    await AppDatabase.instance.updateTask(task);
+    final idx = _departmentTasks.indexWhere((t) => t.id == task.id);
+    if (idx != -1) {
+      _departmentTasks[idx] = task;
+    }
+    notifyListeners();
+    return true;
   }
 
   Future<bool> updateTaskProgress({
@@ -62,14 +72,14 @@ class TaskProvider extends ChangeNotifier {
       progressPercent: progressPercent,
     );
 
-    await DatabaseHelper.instance.updateTask(updated);
+    await AppDatabase.instance.updateTask(updated);
     _departmentTasks[idx] = updated;
     notifyListeners();
     return true;
   }
 
   Future<List<TaskComment>> loadComments(int taskId) async {
-    final comments = await DatabaseHelper.instance.getCommentsForTask(taskId);
+    final comments = await AppDatabase.instance.getCommentsForTask(taskId);
     _taskComments[taskId] = comments;
     notifyListeners();
     return comments;
@@ -89,7 +99,7 @@ class TaskProvider extends ChangeNotifier {
       createdAt: DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
     );
 
-    final id = await DatabaseHelper.instance.insertTaskComment(newComment);
+    final id = await AppDatabase.instance.insertTaskComment(newComment);
     final savedComment = TaskComment(
       id: id,
       taskId: taskId,
@@ -113,7 +123,7 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<List<TaskReminder>> loadReminders(int taskId) async {
-    final reminders = await DatabaseHelper.instance.getRemindersForTask(taskId);
+    final reminders = await AppDatabase.instance.getRemindersForTask(taskId);
     _taskReminders[taskId] = reminders;
     notifyListeners();
     return reminders;
@@ -133,7 +143,7 @@ class TaskProvider extends ChangeNotifier {
       note: note,
     );
 
-    final id = await DatabaseHelper.instance.insertTaskReminder(reminder);
+    final id = await AppDatabase.instance.insertTaskReminder(reminder);
     final savedReminder = TaskReminder(
       id: id,
       taskId: taskId,
@@ -156,7 +166,7 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<bool> deleteReminder(int taskId, int reminderId) async {
-    await DatabaseHelper.instance.deleteTaskReminder(reminderId);
+    await AppDatabase.instance.deleteTaskReminder(reminderId);
     _taskReminders[taskId]?.removeWhere((r) => r.id == reminderId);
     notifyListeners();
     return true;

@@ -7,8 +7,15 @@ import '../providers/leave_request_provider.dart';
 
 class CreateLeaveRequestScreen extends StatefulWidget {
   final String? initialType;
+  final DateTime? initialDate;
+  final String? initialReason;
 
-  const CreateLeaveRequestScreen({super.key, this.initialType});
+  const CreateLeaveRequestScreen({
+    super.key,
+    this.initialType,
+    this.initialDate,
+    this.initialReason,
+  });
 
   @override
   State<CreateLeaveRequestScreen> createState() =>
@@ -18,8 +25,8 @@ class CreateLeaveRequestScreen extends StatefulWidget {
 class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   late String _selectedType;
-  DateTime _fromDate = DateTime.now().add(const Duration(days: 1));
-  DateTime _toDate = DateTime.now().add(const Duration(days: 1));
+  late DateTime _fromDate;
+  late DateTime _toDate;
   double _totalDays = 1.0;
   final _reasonController = TextEditingController();
   bool _isSubmitting = false;
@@ -36,6 +43,22 @@ class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
   void initState() {
     super.initState();
     _selectedType = widget.initialType ?? 'ANNUAL_LEAVE';
+
+    if (widget.initialDate != null) {
+      _fromDate = widget.initialDate!;
+      _toDate = widget.initialDate!;
+    } else if (_selectedType == 'LATE_EXPLANATION' || _selectedType == 'SHIFT_SWAP') {
+      _fromDate = DateTime.now();
+      _toDate = DateTime.now();
+    } else {
+      _fromDate = DateTime.now().add(const Duration(days: 1));
+      _toDate = DateTime.now().add(const Duration(days: 1));
+    }
+
+    if (widget.initialReason != null && widget.initialReason!.isNotEmpty) {
+      _reasonController.text = widget.initialReason!;
+    }
+
     _recalculateDays();
   }
 
@@ -46,10 +69,17 @@ class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
   }
 
   void _recalculateDays() {
-    final diff = _toDate.difference(_fromDate).inDays + 1;
-    setState(() {
-      _totalDays = diff > 0 ? diff.toDouble() : 1.0;
-    });
+    if (_selectedType == 'LATE_EXPLANATION' || _selectedType == 'SHIFT_SWAP') {
+      setState(() {
+        _totalDays = 0.0;
+        _toDate = _fromDate;
+      });
+    } else {
+      final diff = _toDate.difference(_fromDate).inDays + 1;
+      setState(() {
+        _totalDays = diff > 0 ? diff.toDouble() : 1.0;
+      });
+    }
   }
 
   @override
@@ -78,9 +108,9 @@ class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.infoBg.withOpacity(0.6),
+                    color: AppColors.infoBg.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -107,7 +137,7 @@ class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(),
                 items: _requestTypes.map((type) {
                   return DropdownMenuItem<String>(
@@ -116,109 +146,203 @@ class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
                   );
                 }).toList(),
                 onChanged: (val) {
-                  if (val != null) setState(() => _selectedType = val);
+                  if (val != null) {
+                    setState(() => _selectedType = val);
+                    _recalculateDays();
+                  }
                 },
               ),
 
+              // Thông tin hỗ trợ cho từng loại đơn
+              if (_selectedType == 'LATE_EXPLANATION')
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(top: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.warningBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.warningBorder),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.edit_note_rounded, color: AppColors.warning),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Đơn giải trình đi trễ / quên quẹt thẻ để Quản lý xem xét miễn trừ lỗi chuyên cần (không trừ phép năm).',
+                          style: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              if (_selectedType == 'SHIFT_SWAP')
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(top: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.swap_horiz_rounded, color: AppColors.accent),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Đơn đề xuất đổi ca làm việc giữa các nhân sự cùng phòng ban (không trừ phép năm).',
+                          style: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               const SizedBox(height: 20),
 
-              // Chọn ngày Từ ngày - Đến ngày
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              // Chọn ngày: Nếu là Giải trình hoặc Đổi ca thì chỉ chọn 1 ngày duy nhất
+              if (_selectedType == 'LATE_EXPLANATION' || _selectedType == 'SHIFT_SWAP') ...[
+                const Text('Ngày áp dụng',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _fromDate,
+                      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                      lastDate: DateTime.now().add(const Duration(days: 60)),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _fromDate = picked;
+                        _toDate = picked;
+                        _recalculateDays();
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.cardBorder),
+                    ),
+                    child: Row(
                       children: [
-                        const Text('Từ ngày',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 14)),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: _fromDate,
-                              firstDate: DateTime.now().subtract(const Duration(days: 7)),
-                              lastDate: DateTime.now().add(const Duration(days: 60)),
-                            );
-                            if (picked != null) {
-                              setState(() {
-                                _fromDate = picked;
-                                if (_toDate.isBefore(_fromDate)) {
-                                  _toDate = _fromDate;
-                                }
-                                _recalculateDays();
-                              });
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.cardBorder),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today,
-                                    size: 16, color: AppColors.primary),
-                                const SizedBox(width: 8),
-                                Text(DateFormat('dd/MM/yyyy').format(_fromDate)),
-                              ],
-                            ),
-                          ),
+                        const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 10),
+                        Text(
+                          DateFormat('EEEE, dd/MM/yyyy', 'vi_VN').format(_fromDate),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
+                        const Spacer(),
+                        const Text('Chọn ngày', style: TextStyle(color: AppColors.primaryLight, fontSize: 13)),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Đến ngày',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 14)),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: _toDate,
-                              firstDate: _fromDate,
-                              lastDate: DateTime.now().add(const Duration(days: 60)),
-                            );
-                            if (picked != null) {
-                              setState(() {
-                                _toDate = picked;
-                                _recalculateDays();
-                              });
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.cardBorder),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today,
-                                    size: 16, color: AppColors.primary),
-                                const SizedBox(width: 8),
-                                Text(DateFormat('dd/MM/yyyy').format(_toDate)),
-                              ],
+                ),
+              ] else ...[
+                // Chọn ngày Từ ngày - Đến ngày cho Nghỉ phép
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Từ ngày',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 14)),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _fromDate,
+                                firstDate: DateTime.now().subtract(const Duration(days: 7)),
+                                lastDate: DateTime.now().add(const Duration(days: 60)),
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  _fromDate = picked;
+                                  if (_toDate.isBefore(_fromDate)) {
+                                    _toDate = _fromDate;
+                                  }
+                                  _recalculateDays();
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.cardBorder),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_today,
+                                      size: 16, color: AppColors.primary),
+                                  const SizedBox(width: 8),
+                                  Text(DateFormat('dd/MM/yyyy').format(_fromDate)),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Đến ngày',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 14)),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _toDate,
+                                firstDate: _fromDate,
+                                lastDate: DateTime.now().add(const Duration(days: 60)),
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  _toDate = picked;
+                                  _recalculateDays();
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.cardBorder),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_today,
+                                      size: 16, color: AppColors.primary),
+                                  const SizedBox(width: 8),
+                                  Text(DateFormat('dd/MM/yyyy').format(_toDate)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
 
               const SizedBox(height: 16),
 
@@ -233,13 +357,22 @@ class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Tổng số ngày nghỉ tính toán:'),
                     Text(
-                      '$_totalDays ngày',
-                      style: const TextStyle(
+                      (_selectedType == 'LATE_EXPLANATION' || _selectedType == 'SHIFT_SWAP')
+                          ? 'Số ngày tính trừ công:'
+                          : 'Tổng số ngày nghỉ tính toán:',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      (_selectedType == 'LATE_EXPLANATION' || _selectedType == 'SHIFT_SWAP')
+                          ? '0 ngày (Không trừ phép)'
+                          : '$_totalDays ngày',
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
-                        color: AppColors.primary,
+                        color: (_selectedType == 'LATE_EXPLANATION' || _selectedType == 'SHIFT_SWAP')
+                            ? AppColors.success
+                            : AppColors.primary,
                       ),
                     ),
                   ],
@@ -312,7 +445,7 @@ class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
 
                           if (error != null) {
                             // Vi phạm Business Rule
-                            if (mounted) {
+                            if (context.mounted) {
                               showDialog(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
@@ -336,7 +469,7 @@ class _CreateLeaveRequestScreenState extends State<CreateLeaveRequestScreen> {
                             }
                           } else {
                             // Thành công
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Đã nộp đơn thành công! Đang chờ Quản lý phê duyệt.'),

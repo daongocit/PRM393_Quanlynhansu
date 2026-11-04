@@ -9,6 +9,12 @@ class NotificationService {
   NotificationService._init();
 
   Future<void> init() async {
+    // flutter_local_notifications only supports Android & iOS out of the box in this setup
+    if (kIsWeb || (defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS)) {
+      debugPrint('[NotificationService] Running on non-mobile platform ($defaultTargetPlatform) – local notifications disabled.');
+      return;
+    }
+
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -36,6 +42,12 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
+    // On non-mobile platforms, gracefully fallback to console debug log
+    if (kIsWeb || (defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS)) {
+      debugPrint('[Notification] $title: $body');
+      return;
+    }
+
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       'hrm_task_channel',

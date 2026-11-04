@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../../../core/database/database_helper.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/models/leave_request_model.dart';
 
 class ApprovalProvider extends ChangeNotifier {
@@ -22,7 +22,7 @@ class ApprovalProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _allRequests = await DatabaseHelper.instance.getAllPendingRequestsForManager(deptId);
+      _allRequests = await AppDatabase.instance.getAllPendingRequestsForManager(deptId);
       _selectedIds.clear();
     } catch (e) {
       debugPrint('Load manager requests error: $e');
@@ -64,7 +64,7 @@ class ApprovalProvider extends ChangeNotifier {
       managerComment: comment ?? 'Quản lý đã phê duyệt thành công.',
     );
 
-    await DatabaseHelper.instance.updateLeaveRequest(updated);
+    await AppDatabase.instance.updateLeaveRequest(updated);
     _allRequests[idx] = updated;
     _selectedIds.remove(requestId);
     notifyListeners();
@@ -81,7 +81,7 @@ class ApprovalProvider extends ChangeNotifier {
       managerComment: reason,
     );
 
-    await DatabaseHelper.instance.updateLeaveRequest(updated);
+    await AppDatabase.instance.updateLeaveRequest(updated);
     _allRequests[idx] = updated;
     _selectedIds.remove(requestId);
     notifyListeners();
@@ -92,7 +92,7 @@ class ApprovalProvider extends ChangeNotifier {
     if (_selectedIds.isEmpty) return false;
 
     final idsToApprove = _selectedIds.toList();
-    await DatabaseHelper.instance.batchApproveRequests(idsToApprove, managerId);
+    await AppDatabase.instance.batchApproveRequests(idsToApprove, managerId);
 
     for (int i = 0; i < _allRequests.length; i++) {
       if (idsToApprove.contains(_allRequests[i].id)) {

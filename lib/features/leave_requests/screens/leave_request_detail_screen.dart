@@ -5,6 +5,7 @@ import '../../../core/models/leave_request_model.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/leave_request_provider.dart';
+import '../services/leave_calculator.dart';
 
 class LeaveRequestDetailScreen extends StatefulWidget {
   final LeaveRequest request;
@@ -104,14 +105,45 @@ class _LeaveRequestDetailScreenState extends State<LeaveRequestDetailScreen> {
 
             const SizedBox(height: 24),
 
-            // Timeline phê duyệt đa cấp
-            const Text(
-              'Tiến trình phê duyệt',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+            // Timeline phê duyệt đa cấp (Business Rule 2)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Tiến trình phê duyệt',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                        ? AppColors.warningBg
+                        : AppColors.infoBg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                          ? AppColors.warningBorder
+                          : AppColors.infoBorder,
+                    ),
+                  ),
+                  child: Text(
+                    LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                        ? 'Duyệt 2 cấp (> 2 ngày)'
+                        : 'Duyệt 1 cấp (≤ 2 ngày)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)
+                          ? AppColors.warning
+                          : AppColors.info,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
 
@@ -130,28 +162,65 @@ class _LeaveRequestDetailScreenState extends State<LeaveRequestDetailScreen> {
                     isCompleted: true,
                     isCurrent: false,
                   ),
-                  _buildTimelineStep(
-                    title: '2. Cấp Quản lý / Trưởng phòng thẩm định',
-                    subtitle: req.status == 'PENDING'
-                        ? 'Đang chờ Trưởng phòng xem xét'
-                        : (req.status == 'APPROVED'
-                            ? 'Đã duyệt: "${req.managerComment ?? ""}"'
-                            : (req.status == 'REJECTED'
-                                ? 'Từ chối: "${req.managerComment ?? ""}"'
-                                : 'Đã hủy đơn')),
-                    isCompleted: req.status == 'APPROVED',
-                    isCurrent: req.status == 'PENDING',
-                    isRejected: req.status == 'REJECTED',
-                  ),
-                  _buildTimelineStep(
-                    title: '3. Hoàn tất & Trừ hạn mức phép',
-                    subtitle: req.status == 'APPROVED'
-                        ? 'Đã trừ vào quỹ phép cá nhân thành công'
-                        : 'Chưa hoàn tất',
-                    isCompleted: req.status == 'APPROVED',
-                    isCurrent: false,
-                    isLast: true,
-                  ),
+                  if (LeaveCalculatorEngine.requiresMultiTierApproval(req.totalDays)) ...[
+                    // Quy trình 2 cấp: Trưởng phòng thẩm định -> Giám đốc phê chuẩn
+                    _buildTimelineStep(
+                      title: '2. Cấp 1: Trưởng bộ phận Kỹ thuật IT thẩm định',
+                      subtitle: req.status == 'PENDING'
+                          ? 'Đang chờ Trưởng phòng thẩm định hồ sơ'
+                          : (req.status == 'APPROVED'
+                              ? 'Đã thẩm định: "${req.managerComment ?? ""}"'
+                              : (req.status == 'REJECTED'
+                                  ? 'Từ chối: "${req.managerComment ?? ""}"'
+                                  : 'Đã hủy đơn')),
+                      isCompleted: req.status == 'APPROVED',
+                      isCurrent: req.status == 'PENDING',
+                      isRejected: req.status == 'REJECTED',
+                    ),
+                    _buildTimelineStep(
+                      title: '3. Cấp 2: Ban Giám đốc phê chuẩn',
+                      subtitle: req.status == 'APPROVED'
+                          ? 'Đã phê chuẩn hoàn tất'
+                          : (req.status == 'PENDING'
+                              ? 'Chờ phê chuẩn sau khi Trưởng bộ phận xác nhận'
+                              : 'Chưa phê chuẩn'),
+                      isCompleted: req.status == 'APPROVED',
+                      isCurrent: false,
+                    ),
+                    _buildTimelineStep(
+                      title: '4. Hoàn tất & Cập nhật quỹ phép',
+                      subtitle: req.status == 'APPROVED'
+                          ? 'Đã cập nhật vào hồ sơ nhân sự'
+                          : 'Chưa hoàn tất',
+                      isCompleted: req.status == 'APPROVED',
+                      isCurrent: false,
+                      isLast: true,
+                    ),
+                  ] else ...[
+                    // Quy trình 1 cấp: Trưởng phòng duyệt trực tiếp
+                    _buildTimelineStep(
+                      title: '2. Trưởng phòng IT phê duyệt trực tiếp',
+                      subtitle: req.status == 'PENDING'
+                          ? 'Đang chờ Trưởng phòng xem xét'
+                          : (req.status == 'APPROVED'
+                              ? 'Đã duyệt: "${req.managerComment ?? ""}"'
+                              : (req.status == 'REJECTED'
+                                  ? 'Từ chối: "${req.managerComment ?? ""}"'
+                                  : 'Đã hủy đơn')),
+                      isCompleted: req.status == 'APPROVED',
+                      isCurrent: req.status == 'PENDING',
+                      isRejected: req.status == 'REJECTED',
+                    ),
+                    _buildTimelineStep(
+                      title: '3. Hoàn tất & Cập nhật quỹ phép',
+                      subtitle: req.status == 'APPROVED'
+                          ? 'Đã cập nhật vào hồ sơ nhân sự'
+                          : 'Chưa hoàn tất',
+                      isCompleted: req.status == 'APPROVED',
+                      isCurrent: false,
+                      isLast: true,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -206,7 +275,7 @@ class _LeaveRequestDetailScreenState extends State<LeaveRequestDetailScreen> {
                             await leaveProv.cancelRequest(req.id!, user);
                             setState(() => _isCancelling = false);
 
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Đã hủy đơn thành công!'),
