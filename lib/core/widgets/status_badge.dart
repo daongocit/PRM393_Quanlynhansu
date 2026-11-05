@@ -45,6 +45,15 @@ class StatusBadge extends StatelessWidget {
         }
         break;
 
+      case 'PENDING_TIER_2':
+        bg = const Color(0xFFFEF3C7);
+        text = const Color(0xFFD97706);
+        border = const Color(0xFFFDE68A);
+        if (customLabel == null) {
+          label = 'Chờ GĐ phê chuẩn';
+        }
+        break;
+
       case 'REJECTED':
       case 'LATE':
       case 'ABSENT':

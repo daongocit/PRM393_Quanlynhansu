@@ -169,12 +169,19 @@ class _ManagerApprovalListScreenState extends State<ManagerApprovalListScreen>
                               );
 
                               if (confirm == true && user != null) {
-                                await approvalProv.approveBatch(user.id);
+                                final isDirector = user.position.toLowerCase().contains('giám đốc') ||
+                                    user.email == 'tranhr@company.com' ||
+                                    user.departmentId == 2;
+                                await approvalProv.approveBatch(
+                                  user.id,
+                                  isDirector: isDirector,
+                                  approverName: user.fullName,
+                                );
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                          'Đã phê duyệt thành công $selectedCount đơn!'),
+                                          'Đã xử lý phê duyệt $selectedCount đơn!'),
                                       backgroundColor: AppColors.success,
                                     ),
                                   );

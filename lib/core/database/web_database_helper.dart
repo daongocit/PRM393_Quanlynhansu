@@ -296,12 +296,17 @@ class WebDatabaseHelper extends DatabaseAdapter {
   Future<List<LeaveRequest>> getAllPendingRequestsForManager(int deptId) async {
     await _ensureInitialized();
     List<Map<String, dynamic>> result = [];
+    final bool isDirector = deptId == 2;
     final deptUserIds = _users
         .where((u) => u['department_id'] == deptId)
         .map((u) => u['id'])
         .toSet();
 
-    for (final lr in _leaveRequests.where((r) => deptUserIds.contains(r['user_id']))) {
+    final targetRequests = isDirector
+        ? _leaveRequests
+        : _leaveRequests.where((r) => deptUserIds.contains(r['user_id']));
+
+    for (final lr in targetRequests) {
       final user = _users.firstWhere((u) => u['id'] == lr['user_id']);
       final dept = _departments.firstWhere((d) => d['id'] == user['department_id']);
       final approver = lr['approver_id'] != null
@@ -317,9 +322,14 @@ class WebDatabaseHelper extends DatabaseAdapter {
     }
 
     result.sort((a, b) {
-      final aIsPending = (a['status'] == 'PENDING') ? 0 : 1;
-      final bIsPending = (b['status'] == 'PENDING') ? 0 : 1;
-      if (aIsPending != bIsPending) return aIsPending.compareTo(bIsPending);
+      int score(Map<String, dynamic> item) {
+        if (item['status'] == 'PENDING_TIER_2') return 0;
+        if (item['status'] == 'PENDING') return 1;
+        return 2;
+      }
+      final sA = score(a);
+      final sB = score(b);
+      if (sA != sB) return sA.compareTo(sB);
       return (b['id'] as int).compareTo(a['id'] as int);
     });
 
