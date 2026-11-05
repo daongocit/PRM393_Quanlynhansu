@@ -83,7 +83,7 @@ class LeaveCalculatorEngine {
       if (req.requestType == 'ANNUAL_LEAVE') {
         if (req.status == 'APPROVED') {
           usedDays += req.totalDays;
-        } else if (req.status == 'PENDING') {
+        } else if (req.status == 'PENDING' || req.status == 'PENDING_TIER_2') {
           pendingDays += req.totalDays;
         }
       }
@@ -129,7 +129,7 @@ class LeaveCalculatorEngine {
         requestType == 'UNPAID_LEAVE');
 
     for (final req in existingRequests) {
-      if (req.status == 'APPROVED' || req.status == 'PENDING') {
+      if (req.status == 'APPROVED' || req.status == 'PENDING' || req.status == 'PENDING_TIER_2') {
         final existingIsLeave = (req.requestType == 'ANNUAL_LEAVE' ||
             req.requestType == 'SICK_LEAVE' ||
             req.requestType == 'UNPAID_LEAVE');

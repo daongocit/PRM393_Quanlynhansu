@@ -56,6 +56,8 @@ class LeaveRequest {
     switch (status) {
       case 'PENDING':
         return 'Chờ phê duyệt';
+      case 'PENDING_TIER_2':
+        return 'Chờ Giám đốc phê chuẩn (Cấp 2)';
       case 'APPROVED':
         return 'Đã phê duyệt';
       case 'REJECTED':

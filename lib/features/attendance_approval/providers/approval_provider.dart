@@ -12,10 +12,10 @@ class ApprovalProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   List<LeaveRequest> get pendingRequests =>
-      _allRequests.where((r) => r.status == 'PENDING').toList();
+      _allRequests.where((r) => r.status == 'PENDING' || r.status == 'PENDING_TIER_2').toList();
 
   List<LeaveRequest> get processedRequests =>
-      _allRequests.where((r) => r.status != 'PENDING').toList();
+      _allRequests.where((r) => r.status != 'PENDING' && r.status != 'PENDING_TIER_2').toList();
 
   Future<void> loadManagerRequests(int deptId) async {
     _isLoading = true;
@@ -54,14 +54,46 @@ class ApprovalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> approveSingle(int requestId, int managerId, {String? comment}) async {
+  /// Phê duyệt đơn:
+  /// - Đơn > 2 ngày: Duy Ngọc (Trưởng phòng) thẩm định Cấp 1 -> Chuyển sang PENDING_TIER_2.
+  /// - Trần Thảo (Giám đốc) phê chuẩn Cấp 2 -> Chuyển sang APPROVED hoàn tất.
+  /// - Đơn <= 2 ngày: Trưởng phòng duyệt 1 cấp là APPROVED.
+  Future<bool> approveSingle(
+    int requestId,
+    int managerId, {
+    String? comment,
+    bool isDirector = false,
+    String approverName = 'Quản lý',
+  }) async {
     final idx = _allRequests.indexWhere((r) => r.id == requestId);
     if (idx == -1) return false;
 
-    final updated = _allRequests[idx].copyWith(
-      status: 'APPROVED',
+    final currentReq = _allRequests[idx];
+    final bool requiresTier2 = currentReq.totalDays > 2;
+
+    final String newStatus;
+    final String finalComment;
+
+    if (requiresTier2 && !isDirector && currentReq.status == 'PENDING') {
+      // Cấp 1: Trưởng bộ phận IT (Duy Ngọc) thẩm định đơn > 2 ngày
+      newStatus = 'PENDING_TIER_2';
+      final note = (comment != null && comment.trim().isNotEmpty) ? comment.trim() : 'Đồng ý thẩm định';
+      finalComment = 'Cấp 1 ($approverName thẩm định): "$note" → Chờ Giám đốc Trần Thảo phê chuẩn';
+    } else {
+      // Cấp 2 (Trần Thảo) HOẶC Đơn <= 2 ngày (Duy Ngọc duyệt 1 cấp)
+      newStatus = 'APPROVED';
+      final note = (comment != null && comment.trim().isNotEmpty) ? comment.trim() : 'Đã phê chuẩn hoàn tất.';
+      if (currentReq.status == 'PENDING_TIER_2') {
+        finalComment = '${currentReq.managerComment ?? ""}\n• Cấp 2 ($approverName - Giám đốc): "$note"';
+      } else {
+        finalComment = note;
+      }
+    }
+
+    final updated = currentReq.copyWith(
+      status: newStatus,
       approverId: managerId,
-      managerComment: comment ?? 'Quản lý đã phê duyệt thành công.',
+      managerComment: finalComment,
     );
 
     await AppDatabase.instance.updateLeaveRequest(updated);
@@ -71,14 +103,24 @@ class ApprovalProvider extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> rejectSingle(int requestId, int managerId, {required String reason}) async {
+  Future<bool> rejectSingle(
+    int requestId,
+    int managerId, {
+    required String reason,
+    String approverName = 'Quản lý',
+  }) async {
     final idx = _allRequests.indexWhere((r) => r.id == requestId);
     if (idx == -1) return false;
 
-    final updated = _allRequests[idx].copyWith(
+    final currentReq = _allRequests[idx];
+    final String finalComment = currentReq.status == 'PENDING_TIER_2'
+        ? '${currentReq.managerComment ?? ""}\n• Cấp 2 ($approverName - Giám đốc từ chối): "$reason"'
+        : 'Từ chối bởi $approverName: "$reason"';
+
+    final updated = currentReq.copyWith(
       status: 'REJECTED',
       approverId: managerId,
-      managerComment: reason,
+      managerComment: finalComment,
     );
 
     await AppDatabase.instance.updateLeaveRequest(updated);
@@ -88,20 +130,16 @@ class ApprovalProvider extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> approveBatch(int managerId) async {
+  Future<bool> approveBatch(
+    int managerId, {
+    bool isDirector = false,
+    String approverName = 'Quản lý',
+  }) async {
     if (_selectedIds.isEmpty) return false;
 
     final idsToApprove = _selectedIds.toList();
-    await AppDatabase.instance.batchApproveRequests(idsToApprove, managerId);
-
-    for (int i = 0; i < _allRequests.length; i++) {
-      if (idsToApprove.contains(_allRequests[i].id)) {
-        _allRequests[i] = _allRequests[i].copyWith(
-          status: 'APPROVED',
-          approverId: managerId,
-          managerComment: 'Duyệt hàng loạt bởi Quản lý',
-        );
-      }
+    for (final id in idsToApprove) {
+      await approveSingle(id, managerId, isDirector: isDirector, approverName: approverName);
     }
 
     _selectedIds.clear();

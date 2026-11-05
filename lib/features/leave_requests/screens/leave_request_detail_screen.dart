@@ -167,25 +167,28 @@ class _LeaveRequestDetailScreenState extends State<LeaveRequestDetailScreen> {
                     _buildTimelineStep(
                       title: '2. Cấp 1: Trưởng bộ phận Kỹ thuật IT thẩm định',
                       subtitle: req.status == 'PENDING'
-                          ? 'Đang chờ Trưởng phòng thẩm định hồ sơ'
-                          : (req.status == 'APPROVED'
-                              ? 'Đã thẩm định: "${req.managerComment ?? ""}"'
-                              : (req.status == 'REJECTED'
-                                  ? 'Từ chối: "${req.managerComment ?? ""}"'
-                                  : 'Đã hủy đơn')),
-                      isCompleted: req.status == 'APPROVED',
+                          ? 'Đang chờ Trưởng phòng Duy Ngọc thẩm định'
+                          : (req.status == 'PENDING_TIER_2'
+                              ? 'Trưởng phòng Duy Ngọc đã thẩm định xong'
+                              : (req.status == 'APPROVED'
+                                  ? 'Cấp 1 đã thẩm định duyệt'
+                                  : (req.status == 'REJECTED'
+                                      ? 'Từ chối: "${req.managerComment ?? ""}"'
+                                      : 'Đã hủy đơn'))),
+                      isCompleted: req.status == 'PENDING_TIER_2' || req.status == 'APPROVED',
                       isCurrent: req.status == 'PENDING',
                       isRejected: req.status == 'REJECTED',
                     ),
                     _buildTimelineStep(
-                      title: '3. Cấp 2: Ban Giám đốc phê chuẩn',
+                      title: '3. Cấp 2: Ban Giám đốc phê chuẩn (Trần Thảo)',
                       subtitle: req.status == 'APPROVED'
-                          ? 'Đã phê chuẩn hoàn tất'
-                          : (req.status == 'PENDING'
-                              ? 'Chờ phê chuẩn sau khi Trưởng bộ phận xác nhận'
-                              : 'Chưa phê chuẩn'),
+                          ? 'Giám đốc Trần Thảo đã phê chuẩn hoàn tất'
+                          : (req.status == 'PENDING_TIER_2'
+                              ? 'Đang chờ Giám đốc Trần Thảo phê chuẩn'
+                              : 'Chờ sau khi Cấp 1 thẩm định'),
                       isCompleted: req.status == 'APPROVED',
-                      isCurrent: false,
+                      isCurrent: req.status == 'PENDING_TIER_2',
+                      isRejected: req.status == 'REJECTED',
                     ),
                     _buildTimelineStep(
                       title: '4. Hoàn tất & Cập nhật quỹ phép',

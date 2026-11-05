@@ -464,16 +464,39 @@ class DatabaseHelper {
 
   Future<List<LeaveRequest>> getAllPendingRequestsForManager(int deptId) async {
     final db = await instance.database;
-    final result = await db.rawQuery('''
-      SELECT lr.*, u.full_name as user_name, u.avatar_url as user_avatar,
-             d.name as department_name, app.full_name as approver_name
-      FROM leave_requests lr
-      JOIN users u ON lr.user_id = u.id
-      JOIN departments d ON u.department_id = d.id
-      LEFT JOIN users app ON lr.approver_id = app.id
-      WHERE u.department_id = ?
-      ORDER BY CASE WHEN lr.status = 'PENDING' THEN 1 ELSE 2 END, lr.id DESC
-    ''', [deptId]);
+    // Nếu là Giám đốc (deptId = 2 - HR_DEPT), xem toàn bộ đơn của công ty (đặc biệt các đơn cần Giám đốc phê chuẩn PENDING_TIER_2)
+    final bool isDirector = deptId == 2;
+    final List<Map<String, dynamic>> result;
+    if (isDirector) {
+      result = await db.rawQuery('''
+        SELECT lr.*, u.full_name as user_name, u.avatar_url as user_avatar,
+               d.name as department_name, app.full_name as approver_name
+        FROM leave_requests lr
+        JOIN users u ON lr.user_id = u.id
+        JOIN departments d ON u.department_id = d.id
+        LEFT JOIN users app ON lr.approver_id = app.id
+        ORDER BY CASE 
+          WHEN lr.status = 'PENDING_TIER_2' THEN 1
+          WHEN lr.status = 'PENDING' THEN 2 
+          ELSE 3 
+        END, lr.id DESC
+      ''');
+    } else {
+      result = await db.rawQuery('''
+        SELECT lr.*, u.full_name as user_name, u.avatar_url as user_avatar,
+               d.name as department_name, app.full_name as approver_name
+        FROM leave_requests lr
+        JOIN users u ON lr.user_id = u.id
+        JOIN departments d ON u.department_id = d.id
+        LEFT JOIN users app ON lr.approver_id = app.id
+        WHERE u.department_id = ?
+        ORDER BY CASE 
+          WHEN lr.status = 'PENDING' THEN 1 
+          WHEN lr.status = 'PENDING_TIER_2' THEN 2 
+          ELSE 3 
+        END, lr.id DESC
+      ''', [deptId]);
+    }
 
     return result.map((e) => LeaveRequest.fromMap(e)).toList();
   }
