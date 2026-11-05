@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (password != '123') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Mật khẩu không chính xác! (Mật khẩu mặc định của hệ thống là: 123)'),
+          content: Text('Mật khẩu không chính xác!'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -229,41 +229,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       const SizedBox(height: 12),
 
-                      // 2. TextField nhập Mật khẩu (Mặc định: 123)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Mật khẩu truy cập',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Mặc định: 123',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ],
+                      // 2. TextField nhập Mật khẩu
+                      const Text(
+                        'Mật khẩu truy cập',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
-                          hintText: 'Nhập mật khẩu (123)...',
+                          hintText: 'Nhập mật khẩu...',
                           hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
                           prefixIcon: const Icon(Icons.lock_outline_rounded,
                               size: 20, color: AppColors.primary),
