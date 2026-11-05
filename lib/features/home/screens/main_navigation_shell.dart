@@ -242,63 +242,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           ),
 
           const SizedBox(height: 8),
-
-          // Role Switcher in Drawer
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surfaceSubtle,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.swap_horiz_rounded, color: AppColors.primary, size: 18),
-                ),
-                title: const Text(
-                  'Chuyển đổi Role / Demo',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  'Đang chọn: ${user?.fullName}',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                ),
-                trailing: PopupMenuButton<int>(
-                  icon: const Icon(Icons.arrow_drop_down_circle_outlined, color: AppColors.primary, size: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  onSelected: (id) => auth.switchUser(id),
-                  itemBuilder: (ctx) => auth.availableUsers.map((u) {
-                    final isCur = u.id == user?.id;
-                    return PopupMenuItem<int>(
-                      value: u.id,
-                      child: Text(
-                        u.fullName.contains('Hoàng Nam')
-                            ? '${u.fullName} (NV - 2 năm thâm niên)'
-                            : (u.fullName == 'Uyên'
-                                ? '${u.fullName} (NV - 3 tháng)'
-                                : '${u.fullName} (${u.role == "MANAGER" ? "Quản lý" : "NV"})'),
-                        style: TextStyle(
-                          fontWeight: isCur ? FontWeight.w800 : FontWeight.w500,
-                          color: isCur ? AppColors.primary : AppColors.textPrimary,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-          ),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Divider(height: 20),
-          ),
+          const Divider(height: 1),
 
           // SECTION 1: DUY NGỌC (5 MÀN HÌNH)
           _buildDrawerHeaderSection('THÀNH VIÊN 1: DUY NGỌC (CHẤM CÔNG & DUYỆT)'),
