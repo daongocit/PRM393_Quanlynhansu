@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Quyền truy cập Internet để tải avatar nhân sự và dữ liệu mạng -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Quyền hiển thị thông báo trên Android 13+ (API level 33+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Quyền rung khi có thông báo nhắc nhở hạn chót công việc -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <application
         android:label="hrm_app"
         android:name="${applicationName}"
