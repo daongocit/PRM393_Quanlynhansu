@@ -13,16 +13,21 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController(text: '123');
+  bool _obscurePassword = true;
   bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _handleEmailLogin(AuthProvider auth) async {
     final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -38,6 +43,29 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Địa chỉ email không đúng định dạng (cần có @gmail.com)!'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng nhập mật khẩu!'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Tiêu chí bảo mật: Mật khẩu mặc định là 123
+    if (password != '123') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mật khẩu không chính xác! (Mật khẩu mặc định của hệ thống là: 123)'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -116,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 28),
 
-                // FORM NHẬP TÀI KHOẢN GMAIL / GOOGLE
+                // FORM NHẬP TÀI KHOẢN GMAIL & MẬT KHẨU
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -152,12 +180,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // TextField nhập Gmail
+                      // 1. TextField nhập Gmail
+                      const Text(
+                        'Địa chỉ Email / Gmail',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          hintText: 'Nhập địa chỉ Gmail (vd: ngoc@gmail.com)...',
+                          hintText: 'Nhập Gmail (vd: ngoc@gmail.com)...',
                           hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
                           prefixIcon: const Icon(Icons.alternate_email_rounded,
                               size: 20, color: AppColors.primary),
@@ -173,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               : null,
                           filled: true,
                           fillColor: AppColors.background,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(color: AppColors.cardBorder),
@@ -188,6 +225,78 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         onChanged: (_) => setState(() {}),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // 2. TextField nhập Mật khẩu (Mặc định: 123)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Mật khẩu truy cập',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Mặc định: 123',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          hintText: 'Nhập mật khẩu (123)...',
+                          hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                          prefixIcon: const Icon(Icons.lock_outline_rounded,
+                              size: 20, color: AppColors.primary),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                              size: 19,
+                              color: Colors.grey[600],
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.cardBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.cardBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+                          ),
+                        ),
                         onSubmitted: (_) => _handleEmailLogin(auth),
                       ),
 
@@ -421,6 +530,7 @@ class _LoginScreenState extends State<LoginScreen> {
       onPressed: () {
         setState(() {
           _emailController.text = email;
+          _passwordController.text = '123';
         });
       },
     );
