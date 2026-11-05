@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // FORM NHẬP TÀI KHOẢN GMAIL & MẬT KHẨU
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(22),
@@ -160,31 +160,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Image.network(
                             'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png',
-                            height: 20,
+                            height: 22,
                             errorBuilder: (_, _, _) => const Icon(
                               Icons.mark_email_read_rounded,
-                              size: 20,
+                              size: 22,
                               color: AppColors.primary,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           const Text(
                             'Đăng nhập với Google / Gmail',
                             style: TextStyle(
-                              fontSize: 14.5,
+                              fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
 
                       // 1. TextField nhập Gmail
                       const Text(
                         'Địa chỉ Email / Gmail',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
@@ -194,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          hintText: 'Nhập Gmail (vd: ngoc@gmail.com)...',
+                          hintText: 'Nhập Gmail (vd: duyngoc@company.com)...',
                           hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
                           prefixIcon: const Icon(Icons.alternate_email_rounded,
                               size: 20, color: AppColors.primary),
@@ -227,13 +227,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         onChanged: (_) => setState(() {}),
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
                       // 2. TextField nhập Mật khẩu
                       const Text(
                         'Mật khẩu truy cập',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
@@ -280,20 +280,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         onSubmitted: (_) => _handleEmailLogin(auth),
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
-                      // Gợi ý nhanh các tài khoản mẫu
+                      // GỢI Ý ĐIỀN NHANH: CÓ CẢ TRẦN THẢO, DUY NGỌC, UYÊN
+                      const Text(
+                        'Tài khoản gợi ý đăng nhập:',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       Wrap(
                         spacing: 6,
-                        runSpacing: 4,
+                        runSpacing: 6,
                         children: [
-                          _buildQuickFillChip('duyngoc@company.com', 'Duy Ngọc (Manager)'),
+                          _buildQuickFillChip('tranhr@company.com', 'Trần Thảo (Giám đốc HR)'),
+                          _buildQuickFillChip('duyngoc@company.com', 'Duy Ngọc (Manager IT)'),
                           _buildQuickFillChip('uyen@company.com', 'Uyên (Employee)'),
-                          _buildQuickFillChip('hoangnam@company.com', 'Hoàng Nam'),
+                          _buildQuickFillChip('hoangnam@company.com', 'Hoàng Nam (Senior)'),
                         ],
                       ),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
                       // Nút bấm Đăng nhập với Gmail
                       SizedBox(
@@ -337,158 +347,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 24),
-
-                // Phân cách
-                Row(
-                  children: [
-                    const Expanded(child: Divider(color: AppColors.cardBorder)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        'HOẶC CHỌN TRẢI NGHIỆM 1 CHẠM (DEMO)',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.grey[500],
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ),
-                    const Expanded(child: Divider(color: AppColors.cardBorder)),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Danh sách thành viên demo 1 chạm
-                ...auth.availableUsers.map((u) {
-                  final isManager = u.role == "MANAGER";
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isManager
-                            ? AppColors.accent.withValues(alpha: 0.3)
-                            : AppColors.cardBorder,
-                      ),
-                      boxShadow: AppColors.softShadow,
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(18),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () async {
-                          await auth.switchUser(u.id);
-                          if (context.mounted) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const MainNavigationShell(),
-                              ),
-                            );
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isManager ? AppColors.accent : AppColors.primaryLight,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: NetworkImage(u.avatarUrl),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          u.fullName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 14.5,
-                                            color: AppColors.textPrimary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 7, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: isManager
-                                                ? AppColors.accent.withValues(alpha: 0.12)
-                                                : AppColors.secondary.withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            isManager ? 'QUẢN LÝ' : 'NHÂN VIÊN',
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.w800,
-                                              color: isManager
-                                                  ? AppColors.accent
-                                                  : AppColors.secondary,
-                                            ),
-                                          ),
-                                        ),
-                                        if (u.fullName.contains('Hoàng Nam')) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 7, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: const Color(0xFFFBBF24), width: 0.8),
-                                            ),
-                                            child: const Text(
-                                              'THÂM NIÊN 2 NĂM',
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFFD97706),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      '${u.position} • ${u.email}',
-                                      style: const TextStyle(
-                                        fontSize: 11.5,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.arrow_forward_ios_rounded,
-                                  size: 14, color: AppColors.textMuted),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
               ],
             ),
           ),
@@ -502,7 +360,7 @@ class _LoginScreenState extends State<LoginScreen> {
       avatar: const Icon(Icons.flash_on_rounded, size: 13, color: AppColors.primary),
       label: Text(
         label,
-        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
       backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
